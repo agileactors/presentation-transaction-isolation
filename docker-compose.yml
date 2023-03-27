@@ -1,0 +1,38 @@
+version: '3.7'
+
+services:
+
+  pgdb:
+    image: postgres:14.0
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_USER: sampleuser
+      POSTGRES_DB: sample
+    command: postgres -c config_file=/etc/postgresql.conf
+    volumes:
+      - ./psql.conf:/etc/postgresql.conf
+
+  crdb:
+    image: cockroachdb/cockroach:latest
+    command: start --insecure
+    container_name: statements-cockroachdb
+    hostname: localhost
+    ports:
+      - "26200:26257"
+      - "8082:8080"
+    entrypoint: >
+      sh -c "waitAndStart() {
+             echo \"waiting for the db to come up\"
+             sleep 5
+
+             echo \"creating database\"
+             ./cockroach sql --insecure --execute=\"CREATE DATABASE IF NOT EXISTS sample;
+                         CREATE USER IF NOT EXISTS root;
+                         GRANT ALL ON DATABASE sample TO root;  \"
+             }
+
+             waitAndStart & ./cockroach start-single-node --insecure "
